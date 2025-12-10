@@ -1,0 +1,18 @@
+
+{
+  "leads": [
+    {
+      "id": "lead_001",
+      "phone_number": "+1234567890",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "location": "New York",
+      "budget_min": 200000,
+      "budget_max": 500000,
+      "preferences": {
+        "bedrooms": 2,
+        "location": "downtown"
+      }
+    }
+  ]
+}

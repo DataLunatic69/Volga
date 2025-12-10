@@ -1,0 +1,27 @@
+"""Sample property data for development."""
+{
+  "properties": [
+    {
+      "id": "prop_001",
+      "title": "Modern Downtown Apartment",
+      "description": "Luxurious modern apartment in the heart of downtown with city views",
+      "location": "Downtown",
+      "price": 350000,
+      "bedrooms": 2,
+      "bathrooms": 2,
+      "amenities": ["gym", "pool", "parking", "concierge"],
+      "images": []
+    },
+    {
+      "id": "prop_002",
+      "title": "Cozy Studio in Midtown",
+      "description": "Perfect starter apartment with modern amenities",
+      "location": "Midtown",
+      "price": 200000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "amenities": ["parking", "laundry", "security"],
+      "images": []
+    }
+  ]
+}
