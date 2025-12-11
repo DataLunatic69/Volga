@@ -9,7 +9,11 @@ from twilio.rest import Client
 from dotenv import load_dotenv
 
 # Import utilities
-from app import validate_phone_number, truncate_message, clean_phone_number
+# Replace these lines:
+# from app import validate_phone_number, truncate_message, clean_phone_number
+
+# With:
+from app.utils.phone_utils import validate_phone_number, truncate_message, clean_phone_number
 
 # Load environment variables
 load_dotenv()

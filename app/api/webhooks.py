@@ -7,11 +7,11 @@ from fastapi import APIRouter, Request, HTTPException
 from typing import Dict
 import json
 
-# Import utilities
-from app import validate_phone_number, get_timestamp
+# Import utilities - FIXED IMPORTS
+from app.utils.phone_utils import validate_phone_number, get_timestamp
 
 # Import WhatsApp client for sending responses
-from app.integrations import WhatsAppClient
+from app.integrations.whatsapp import WhatsAppClient  # Direct import
 
 # Create router
 router = APIRouter()
@@ -24,20 +24,6 @@ router = APIRouter()
 async def receive_whatsapp_message(request: Request):
     """
     Receive incoming WhatsApp message directly from Twilio
-    
-    Twilio sends POST request with form data containing:
-    - MessageSid: Unique message ID
-    - From: Sender's WhatsApp number
-    - To: Your Twilio WhatsApp number
-    - Body: Message text
-    - ProfileName: User's WhatsApp name
-    - And many other fields...
-    
-    This endpoint:
-    1. Receives and extracts the complete raw payload
-    2. Validates required fields
-    3. Passes to AI for processing (Aman's work)
-    4. Sends response back to user
     """
     
     print("\n" + "="*80)
@@ -47,7 +33,6 @@ async def receive_whatsapp_message(request: Request):
     
     try:
         # Extract complete raw payload from Twilio
-        # Twilio sends form data, FastAPI converts to dict
         form_data = await request.form()
         payload = dict(form_data)
         
@@ -93,13 +78,8 @@ async def receive_whatsapp_message(request: Request):
         
         print(f"\n✅ Payload validated successfully")
         
-        # TODO: Process with AI service (Aman's work)
+        # TODO: Process with AI service
         # For now, just acknowledge receipt
-        # ai_response = await ai_service.process(user_message)
-        
-        # TODO: Send response back to user
-        # whatsapp_client = WhatsAppClient()
-        # await whatsapp_client.send_message(user_phone, ai_response)
         
         print("="*80 + "\n")
         
