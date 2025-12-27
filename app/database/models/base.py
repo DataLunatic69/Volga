@@ -10,14 +10,18 @@ from sqlmodel import Field, SQLModel
 
 
 class TimestampMixin:
-    """Mixin for created_at and updated_at timestamps."""
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
-        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+        sa_column_kwargs={
+            "server_default": func.now(),
+        },
     )
+
     updated_at: Optional[datetime] = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), onupdate=func.now())
+        sa_column_kwargs={
+            "onupdate": func.now(),
+        },
     )
 
 
