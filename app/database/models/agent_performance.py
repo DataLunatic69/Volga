@@ -18,7 +18,7 @@ class AgentPerformance(BaseModel, table=True):
     
     agent_id: UUID = Field(foreign_key="agency_users.id", index=True)
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    metric_date: date = Field(sa_column=Column(Date), index=True)
+    metric_date: date = Field(sa_column=Column(Date, index=True))
     viewings_conducted: int = Field(default=0, sa_column=Column(Integer))
     viewings_completed_on_time: int = Field(default=0, sa_column=Column(Integer))
     viewings_cancelled: int = Field(default=0, sa_column=Column(Integer))

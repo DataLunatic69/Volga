@@ -49,7 +49,7 @@ class CalendarEvent(BaseModel, table=True):
     timezone: Optional[str] = Field(default=None, sa_column=Column(Text))
     status: str = Field(default="scheduled", sa_column=Column(Text))  # enum: scheduled, confirmed, completed, etc.
     viewing_id: Optional[UUID] = Field(default=None, foreign_key="viewings.id")
-    contact_id: Optional[UUID] = Field(default=None, foreign_key="contacts.id")
+    contact_id: Optional[UUID] = Field(default=None, foreign_key="leads.id")
     property_id: Optional[UUID] = Field(default=None, foreign_key="properties.id")
     is_recurring: bool = Field(default=False, sa_column=Column(Boolean))
     recurrence_rule: Optional[str] = Field(default=None, sa_column=Column(Text))  # RRULE format

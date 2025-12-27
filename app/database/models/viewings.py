@@ -41,7 +41,7 @@ class Viewing(BaseModel, table=True):
     __tablename__ = "viewings"
     
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    contact_id: UUID = Field(foreign_key="contacts.id", index=True)
+    contact_id: UUID = Field(foreign_key="leads.id", index=True)
     property_id: UUID = Field(foreign_key="properties.id", index=True)
     agent_id: UUID = Field(foreign_key="agency_users.id", index=True)
     conversation_id: Optional[UUID] = Field(default=None, foreign_key="conversations.id")

@@ -23,7 +23,7 @@ class AgencyUser(BaseModel, table=True):
     __tablename__ = "agency_users"
     
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    user_id: UUID = Field(foreign_key="auth.users.id", index=True)
+    user_id: UUID = Field(index=True)
     role: str = Field(default="agent", sa_column=Column(Text))  # enum: admin, agent, manager, viewer
     full_name: Optional[str] = Field(default=None, sa_column=Column(Text))
     email: Optional[str] = Field(default=None, sa_column=Column(Text))

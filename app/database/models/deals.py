@@ -37,7 +37,7 @@ class Deal(BaseModel, table=True):
     __tablename__ = "deals"
     
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    contact_id: UUID = Field(foreign_key="contacts.id", index=True)
+    contact_id: UUID = Field(foreign_key="leads.id", index=True)
     property_id: UUID = Field(foreign_key="properties.id", index=True)
     deal_name: Optional[str] = Field(default=None, sa_column=Column(Text))
     deal_stage: str = Field(default="lead", sa_column=Column(Text))  # enum: lead, qualified, etc.

@@ -17,7 +17,7 @@ class AgencyMetricsDaily(BaseModel, table=True):
     __tablename__ = "agency_metrics_daily"
     
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    metric_date: date = Field(sa_column=Column(Date), index=True)
+    metric_date: date = Field(sa_column=Column(Date, index=True))
     total_enquiries: int = Field(default=0, sa_column=Column(Integer))
     qualified_leads: int = Field(default=0, sa_column=Column(Integer))
     viewings_scheduled: int = Field(default=0, sa_column=Column(Integer))

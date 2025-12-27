@@ -46,7 +46,7 @@ class Conversation(BaseModel, table=True):
     __tablename__ = "conversations"
     
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    contact_id: UUID = Field(foreign_key="contacts.id", index=True)
+    contact_id: UUID = Field(foreign_key="leads.id", index=True)
     channel: str = Field(sa_column=Column(Text))  # enum: whatsapp, voice, sms, web_chat
     conversation_status: str = Field(default="active", sa_column=Column(Text))  # enum: active, paused, closed, etc.
     current_stage: Optional[str] = Field(default=None, sa_column=Column(Text))  # enum: greeting, consent, etc.

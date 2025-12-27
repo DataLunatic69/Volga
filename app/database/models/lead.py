@@ -41,7 +41,7 @@ class Lead(BaseModel, table=True):
     __tablename__ = "leads"
     
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
-    whatsapp_number: Optional[str] = Field(default=None, index=True, sa_column=Column(Text))
+    whatsapp_number: Optional[str] = Field(default=None, sa_column=Column(Text, index=True))
     email: Optional[str] = Field(default=None, sa_column=Column(Text))
     full_name: Optional[str] = Field(default=None, sa_column=Column(Text))
     preferred_name: Optional[str] = Field(default=None, sa_column=Column(Text))

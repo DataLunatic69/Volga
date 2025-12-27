@@ -22,7 +22,7 @@ class ViewingFeedback(BaseModel, table=True):
     __tablename__ = "viewing_feedback"
     
     viewing_id: UUID = Field(foreign_key="viewings.id", index=True)
-    contact_id: UUID = Field(foreign_key="contacts.id", index=True)
+    contact_id: UUID = Field(foreign_key="leads.id", index=True)
     overall_rating: Optional[int] = Field(default=None, sa_column=Column(Integer))  # 1-5
     liked_aspects: Optional[list[str]] = Field(default=None, sa_column=Column(ARRAY(Text)))
     disliked_aspects: Optional[list[str]] = Field(default=None, sa_column=Column(ARRAY(Text)))

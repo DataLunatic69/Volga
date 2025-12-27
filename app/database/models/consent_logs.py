@@ -31,7 +31,7 @@ class ConsentLog(BaseModel, table=True):
     """Consent Log table model."""
     __tablename__ = "consent_logs"
     
-    contact_id: UUID = Field(foreign_key="contacts.id", index=True)
+    contact_id: UUID = Field(foreign_key="leads.id", index=True)
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
     consent_type: str = Field(sa_column=Column(Text))  # enum: data_processing, marketing, third_party_sharing
     consent_status: bool = Field(sa_column=Column(Boolean))

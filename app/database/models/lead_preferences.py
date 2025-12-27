@@ -46,7 +46,7 @@ class LeadPreferences(BaseModel, table=True):
     """Lead Preferences table model."""
     __tablename__ = "lead_preferences"
     
-    contact_id: UUID = Field(foreign_key="contacts.id", index=True)
+    contact_id: UUID = Field(foreign_key="leads.id", index=True)
     property_type: Optional[str] = Field(default=None, sa_column=Column(Text))  # enum: apartment, house, studio, commercial
     transaction_type: Optional[str] = Field(default=None, sa_column=Column(Text))  # enum: rent, buy
     budget_min: Optional[Decimal] = Field(default=None, sa_column=Column(Numeric))
