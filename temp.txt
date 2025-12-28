@@ -1,0 +1,41 @@
+GROQ_API_KEY=
+SUPABASE_URL=https://qwddxnvcdkubctgkqtpa.supabase.co
+SUPABASE_KEY= sb_publishable_79sQfID4T7kl3SfSNw9h0A__SzC3Ge7
+DATABASE_URL=postgresql+asyncpg://postgres:Aura@123@db.qwddxnvcdkubctgkqtpa.supabase.co:5432/postgres
+
+# Redis
+REDIS_URL=redis-19024.crce217.ap-south-1-1.ec2.cloud.redislabs.com:19024
+
+# Qdrant
+QDRANT_URL=https://5f836d86-17ba-44de-b1d4-13c7b6839f2a.us-east-1-1.aws.cloud.qdrant.io
+QDRANT_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.G4q1j4VS0aLahdwomF0wb0k9auruGPN-aTkHW84dhOk
+
+
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+EMAIL_FROM=noreply@nexcell.com
+
+# WhatsApp
+WHATSAPP_BUSINESS_ID=your-business-id
+WHATSAPP_ACCESS_TOKEN=your-access-token
+WHATSAPP_WEBHOOK_SECRET=your-webhook-secret
+
+# Security
+JWT_SECRET_KEY=your-256-bit-secret-key
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+ENCRYPTION_KEY=your-32-byte-encryption-key
+
+# Application
+APP_NAME=NexCell AI Receptionist
+APP_VERSION=2.0.0
+ENVIRONMENT=development
+DEBUG=true
+API_HOST=0.0.0.0
+API_PORT=8000
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+LOG_LEVEL=INFO

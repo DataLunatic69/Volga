@@ -11,3 +11,4 @@ __pycache__
 *.pyzwz
 *.md
 !README.md
+*.txt
