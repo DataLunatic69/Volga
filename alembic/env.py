@@ -26,6 +26,10 @@ database_url = os.getenv(
 )
 # Alembic needs psycopg2, not asyncpg
 database_url = database_url.replace("+asyncpg", "")
+
+# Escape % characters for configparser by doubling them
+database_url = database_url.replace("%", "%%")
+
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
