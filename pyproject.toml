@@ -26,4 +26,5 @@ dependencies = [
     "sqlalchemy>=2.0.45",
     "fastapi[standard]>=0.127.0",
     "asyncpg>=0.31.0",
+    "alembic>=1.17.2",
 ]

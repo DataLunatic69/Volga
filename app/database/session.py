@@ -4,26 +4,25 @@ from typing import AsyncGenerator
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
-# Import all models so SQLModel can create tables
-# This ensures all table metadata is registered with SQLModel
+
 try:
-    # Try relative import first (when imported as a module)
+
     from .models import *  # noqa: F401, F403
 except ImportError:
-    # Fallback for when running as a script
+   
     import sys
     from pathlib import Path
-    # Add the ai-backend directory to Python path
+   
     backend_dir = Path(__file__).parent.parent.parent
     if str(backend_dir) not in sys.path:
         sys.path.insert(0, str(backend_dir))
     from app.database.models import *  # noqa: F401, F403
 
-# URL encode the password: @ becomes %40
-# Original: postgresql+asyncpg://postgres:Aura@123@db.qwddxnvcdkubctgkqtpa.supabase.co:5432/postgres
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "postgresql+asyncpg://postgres:Aura%40123@db.qwddxnvcdkubctgkqtpa.supabase.co:5432/postgres"
+    "postgresql+asyncpg://postgres.qwddxnvcdkubctgkqtpa:Aura%40123@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
+
 )
 
 # Create async engine
@@ -31,7 +30,7 @@ async_engine = create_async_engine(
     url=DATABASE_URL,
     echo=True,  # Set to False in production
     pool_pre_ping=True,  # Verify connections before using them
-    pool_size=5,  # Connection pool size
+    pool_size=15,  # Connection pool size
     max_overflow=10  # Max connections beyond pool_size
 )
 
