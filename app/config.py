@@ -69,12 +69,19 @@ class Settings:
     LANGSMITH_PROJECT: Optional[str] = os.getenv("LANGSMITH_PROJECT")
     LANGSMITH_TRACING: bool = os.getenv("LANGSMITH_TRACING", "False").lower() == "true"
     
+    
     # ====================
     # Vector Database (Qdrant)
     # ====================
     QDRANT_URL: Optional[str] = os.getenv("QDRANT_URL")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
     QDRANT_COLLECTION_NAME: str = os.getenv("QDRANT_COLLECTION_NAME", "properties")
+    
+    def __post_init__(self):
+        """Validate settings after initialization."""
+        # Validate Qdrant settings if URL is provided
+        if self.QDRANT_URL and not self.QDRANT_API_KEY:
+            raise ValueError("QDRANT_API_KEY must be set when QDRANT_URL is provided")
     
     # ====================
     # WhatsApp Business API
