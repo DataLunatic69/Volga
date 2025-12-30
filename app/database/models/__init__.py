@@ -8,12 +8,15 @@ from .agency_user import AgencyUser, UserRole
 from .agent_calender import AgentCalendar
 from .agent_performance import AgentPerformance
 from .ai_agent_session import AIAgentSession
+from .api_keys import APIKey
+from .auth_users import AuthUser
 from .base import BaseModel, TimestampMixin
 from .calender_events import CalendarEvent, EventStatus, EventType
 from .consent_logs import ConsentLog, ConsentMethod, ConsentType
 from .conversation_state_snapshots import ConversationStateSnapshot, CreatedBy
 from .conversations import Channel, Conversation, ConversationStatus, CurrentStage
 from .deals import Deal, DealStage
+from .email_verification_tokens import EmailVerificationToken
 from .escalation_rules import EscalationRule
 from .lead import ContactSource, Lead, LifecycleStage
 from .lead_preferences import (
@@ -24,6 +27,8 @@ from .lead_preferences import (
     Urgency,
 )
 from .messages import Direction, Message, MessageType, SenderType
+from .password_reset_tokens import PasswordResetToken
+from .permissions import Permission
 from .properties import (
     Furnishing as PropertyFurnishing,
     PricePeriod,
@@ -33,6 +38,10 @@ from .properties import (
     TransactionType as PropertyTransactionType,
 )
 from .property_availibility import PropertyAvailability
+from .refresh_tokens import RefreshToken
+from .role_permissions import RolePermission
+from .roles import Role
+from .user_roles import UserRole as UserRoleAssignment
 from .viewing_feedback import CollectedBy, ViewingFeedback
 from .viewings import CancelledBy, Viewing, ViewingStatus, ViewingType
 
@@ -48,6 +57,16 @@ __all__ = [
     # Agency User
     "AgencyUser",
     "UserRole",
+    # Auth & Authorization
+    "AuthUser",
+    "RefreshToken",
+    "Role",
+    "Permission",
+    "RolePermission",
+    "UserRoleAssignment",
+    "APIKey",
+    "PasswordResetToken",
+    "EmailVerificationToken",
     # Lead
     "Lead",
     "ContactSource",
