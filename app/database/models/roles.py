@@ -14,9 +14,7 @@ class Role(BaseModel, table=True):
     __tablename__ = "roles"
     
     name: str = Field(
-        unique=True,
-        index=True,
-        sa_column=Column(Text)
+        sa_column=Column(Text, unique=True, index=True)
     )  # "super_admin", "agency_admin", "agent", "manager", "viewer"
     description: Optional[str] = Field(default=None, sa_column=Column(Text))
     is_system_role: bool = Field(

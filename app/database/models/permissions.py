@@ -14,17 +14,13 @@ class Permission(BaseModel, table=True):
     __tablename__ = "permissions"
     
     name: str = Field(
-        unique=True,
-        index=True,
-        sa_column=Column(Text)
+        sa_column=Column(Text, unique=True, index=True)
     )  # "contacts.view", "contacts.edit", "properties.delete"
     resource: str = Field(
-        index=True,
-        sa_column=Column(Text)
+        sa_column=Column(Text, index=True)
     )  # "contacts", "properties", "viewings"
     action: str = Field(
-        index=True,
-        sa_column=Column(Text)
+        sa_column=Column(Text, index=True)
     )  # "view", "edit", "create", "delete"
     description: Optional[str] = Field(default=None, sa_column=Column(Text))
 
