@@ -18,8 +18,7 @@ class APIKey(BaseModel, table=True):
     agency_id: UUID = Field(foreign_key="agencies.id", index=True)
     key_hash: str = Field(sa_column=Column(Text))  # bcrypt hashed
     key_prefix: str = Field(
-        index=True,
-        sa_column=Column(Text)
+        sa_column=Column(Text, index=True)
     )  # "nexc_live_abc..." for identification
     name: str = Field(sa_column=Column(Text))  # "Production API Key"
     scopes: list[str] = Field(

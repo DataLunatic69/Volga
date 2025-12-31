@@ -16,7 +16,7 @@ class AuthUser(BaseModel, table=True):
     """Core authentication user table."""
     __tablename__ = "auth_users"
     
-    email: str = Field(unique=True, index=True, sa_column=Column(Text))
+    email: str = Field(sa_column=Column(Text, unique=True, index=True))
     password_hash: str = Field(sa_column=Column(Text))  # bcrypt hashed
     is_active: bool = Field(default=True, sa_column=Column(Boolean))
     is_verified: bool = Field(default=False, sa_column=Column(Boolean))

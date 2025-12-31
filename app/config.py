@@ -33,7 +33,7 @@ class Settings:
     # ====================
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://postgres:Aura%40123@db.qwddxnvcdkubctgkqtpa.supabase.co:5432/postgres"
+        "postgresql://postgres.qwddxnvcdkubctgkqtpa:Aura%40123@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
     )
     SUPABASE_URL: Optional[str] = os.getenv("SUPABASE_URL")
     SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY")
