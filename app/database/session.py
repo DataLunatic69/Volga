@@ -21,7 +21,7 @@ except ImportError:
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL", 
-    "postgresql://postgres.qwddxnvcdkubctgkqtpa:Aura%40123@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
+    "postgresql+asyncpg://postgres.qwddxnvcdkubctgkqtpa:Aura%40123@aws-1-ap-south-1.pooler.supabase.com:5432/postgres"
 
 )
 
