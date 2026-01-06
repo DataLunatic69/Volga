@@ -2,8 +2,8 @@
 Authentication-specific Redis caching utilities.
 """
 import logging
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from typing import Optional, List, Dict, Any, Set
+from datetime import datetime
 from uuid import UUID
 
 from app.core.cache import redis_cache
