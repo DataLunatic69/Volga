@@ -1,80 +1,138 @@
 """
-Authentication middleware for FastAPI.
-Extracts and validates JWT tokens from requests.
+Authentication Middleware - Extracts and validates JWT tokens.
+
+Runs before route handlers to:
+1. Extract JWT from Authorization header
+2. Validate token signature and expiry
+3. Check token blacklist
+4. Attach user to request.state
 """
-from typing import Optional
-from uuid import UUID
+from typing import Callable
+import logging
+
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.auth.jwt import decode_token
-from app.auth.exceptions import InvalidTokenError, TokenExpiredError
+from app.auth.jwt import verify_token
+from app.auth.cache import AuthCache
+from app.auth.dependencies import get_user_from_token
+from app.database.models import AuthUser
+
+logger = logging.getLogger(__name__)
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """
-    Middleware to extract and validate JWT tokens from requests.
-    Attaches user information to request state if token is valid.
+    Middleware to authenticate requests via JWT tokens.
+    
+    Public endpoints (no auth required) should be excluded via
+    PUBLIC_ENDPOINTS list or by not requiring authentication.
     """
     
-    def __init__(self, app, auto_error: bool = True):
-        """
-        Initialize auth middleware.
-        
-        Args:
-            app: FastAPI application
-            auto_error: If True, raise HTTPException on invalid token
-        """
-        super().__init__(app)
-        self.auto_error = auto_error
+    # Public endpoints that don't require authentication
+    PUBLIC_ENDPOINTS = [
+        "/api/v1/register",
+        "/api/v1/login",
+        "/api/v1/refresh",
+        "/api/v1/forgot-password",
+        "/api/v1/reset-password",
+        "/api/v1/verify-email",
+        "/api/v1/resend-verification",
+        "/api/v1/health",
+        "/docs",
+        "/openapi.json",
+        "/redoc",
+    ]
     
-    async def dispatch(self, request: Request, call_next):
-        """
-        Process request and extract token if present.
+    # Public path prefixes
+    PUBLIC_PREFIXES = [
+        "/webhooks/",  # Webhook endpoints
+        "/api/v1/verify-email/",  # GET email verification
+        "/api/v1/reset-password/",  # GET password reset form
+    ]
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Process request and attach authenticated user."""
         
-        Args:
-            request: FastAPI request
-            call_next: Next middleware/handler
-            
-        Returns:
-            Response
-        """
-        # Skip authentication for certain paths
-        if request.url.path in ["/", "/health", "/docs", "/openapi.json", "/redoc"]:
+        # Skip authentication for public endpoints
+        if self._is_public_endpoint(request.url.path):
             return await call_next(request)
         
         # Extract token from Authorization header
         authorization = request.headers.get("Authorization")
         
-        if authorization and authorization.startswith("Bearer "):
-            token = authorization.split(" ")[1]
-            
-            try:
-                # Decode token (without full verification - that happens in dependencies)
-                # This is just to attach user info to request state
-                payload = decode_token(token, verify=False)
-                user_id = payload.get("sub")
-                
-                if user_id:
-                    # Attach user_id to request state
-                    try:
-                        request.state.user_id = UUID(user_id)
-                        request.state.user_email = payload.get("email")
-                        request.state.token_payload = payload
-                    except (ValueError, TypeError):
-                        # Invalid UUID format, skip
-                        pass
-                
-            except (InvalidTokenError, TokenExpiredError, ValueError):
-                # Token invalid or expired, but don't raise error here
-                # Let dependencies handle authentication errors
-                if self.auto_error:
-                    return Response(
-                        content='{"detail":"Invalid token"}',
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        media_type="application/json",
-                        headers={"WWW-Authenticate": "Bearer"}
-                    )
+        if not authorization:
+            logger.debug(f"No Authorization header for {request.url.path}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         
-        return await call_next(request)
+        # Parse Bearer token
+        try:
+            scheme, token = authorization.split()
+            if scheme.lower() != "bearer":
+                raise ValueError("Invalid authorization scheme")
+        except ValueError:
+            logger.warning(f"Invalid Authorization header format: {authorization[:20]}...")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authorization header format. Expected: Bearer <token>",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Verify token and get user
+        try:
+            # Verify token (checks signature, expiry, blacklist)
+            payload = await verify_token(token)
+            user_id = payload.get("sub")
+            
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token payload"
+                )
+            
+            # Get user from cache or database
+            user = await get_user_from_token(user_id)
+            
+            if not user:
+                logger.warning(f"User {user_id} not found")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found"
+                )
+            
+            # Attach user to request state
+            request.state.user = user
+            request.state.user_id = user.id
+            
+            logger.debug(f"Authenticated user {user.id} for {request.url.path}")
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Authentication error: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failed"
+            )
+        
+        # Continue to next middleware/route handler
+        response = await call_next(request)
+        return response
+    
+    def _is_public_endpoint(self, path: str) -> bool:
+        """Check if endpoint is public (no auth required)."""
+        # Check exact matches
+        if path in self.PUBLIC_ENDPOINTS:
+            return True
+        
+        # Check prefixes
+        for prefix in self.PUBLIC_PREFIXES:
+            if path.startswith(prefix):
+                return True
+        
+        return False

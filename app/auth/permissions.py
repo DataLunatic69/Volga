@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.database.models import AuthUser
 from app.auth.rbac import PermissionService
-from app.auth.permission_cache import permission_cache
+from app.auth.cache import permission_cache
 from app.auth.exceptions import PermissionDeniedError
 from app.auth.dependencies import get_current_user
 import logging
