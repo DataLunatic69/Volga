@@ -55,3 +55,18 @@ class RefreshTokenRevokedError(AuthenticationError):
     """Raised when refresh token has been revoked."""
     pass
 
+
+class PermissionDeniedError(AuthenticationError):
+    """Raised when user lacks required permission."""
+    pass
+
+
+class InvalidInputError(AuthenticationError):
+    """Raised when input validation fails."""
+    pass
+
+
+class ResourceNotFoundError(AuthenticationError):
+    """Raised when requested resource is not found."""
+    pass
+
