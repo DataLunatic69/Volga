@@ -18,6 +18,7 @@ from app.database.models import (
 )
 from app.auth.password import hash_password, verify_password, check_password_strength
 from app.auth.jwt import create_access_token, create_refresh_token, verify_token
+from app.auth.token_utils import hash_token, verify_token_hash, create_token_with_prefix, extract_token_prefix
 from app.auth.cache import AuthCache
 from app.auth.exceptions import (
     InvalidCredentialsError,
@@ -35,23 +36,16 @@ from app.auth.exceptions import (
 class AuthService:
     """Service for authentication operations."""
     
-    # Account lockout settings
-    MAX_FAILED_ATTEMPTS = 5
-    LOCKOUT_DURATION_MINUTES = 30
-    
-    # Token expiration settings
-    REFRESH_TOKEN_EXPIRE_DAYS = 30
-    EMAIL_VERIFICATION_EXPIRE_HOURS = 24
-    PASSWORD_RESET_EXPIRE_HOURS = 1
-    
     def __init__(self, db: AsyncSession):
-        """
-        Initialize auth service.
-        
-        Args:
-            db: Database session
-        """
+        """Initialize AuthService with database session and config."""
         self.db = db
+        # Load settings from config (no hardcoded magic numbers)
+        from app.config import settings
+        self.MAX_FAILED_ATTEMPTS = settings.AUTH_MAX_FAILED_ATTEMPTS
+        self.LOCKOUT_DURATION_MINUTES = settings.AUTH_LOCKOUT_DURATION_MINUTES
+        self.REFRESH_TOKEN_EXPIRE_DAYS = settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        self.EMAIL_VERIFICATION_EXPIRE_HOURS = settings.AUTH_EMAIL_VERIFICATION_EXPIRE_HOURS
+        self.PASSWORD_RESET_EXPIRE_HOURS = settings.AUTH_PASSWORD_RESET_EXPIRE_HOURS
     
     async def register(
         self,
@@ -111,13 +105,14 @@ class AuthService:
             email=user.email
         )
         
-        plain_refresh_token = create_refresh_token()
-        refresh_token_hash = hash_password(plain_refresh_token)  # Hash for storage
+        plain_refresh_token, token_prefix = create_refresh_token()
+        refresh_token_hash = hash_token(plain_refresh_token)  # Fast SHA-256 hashing
         
         # Store refresh token
         refresh_token = RefreshToken(
             user_id=user.id,
             token_hash=refresh_token_hash,
+            token_prefix=token_prefix,  # For O(1) lookup
             expires_at=datetime.now(timezone.utc) + timedelta(days=self.REFRESH_TOKEN_EXPIRE_DAYS),
             device_info=None
         )
@@ -199,13 +194,14 @@ class AuthService:
             email=user.email
         )
         
-        plain_refresh_token = create_refresh_token()
-        refresh_token_hash = hash_password(plain_refresh_token)
+        plain_refresh_token, token_prefix = create_refresh_token()
+        refresh_token_hash = hash_token(plain_refresh_token)  # Fast SHA-256 hashing
         
         # Store refresh token
         refresh_token = RefreshToken(
             user_id=user.id,
             token_hash=refresh_token_hash,
+            token_prefix=token_prefix,  # For O(1) lookup
             expires_at=datetime.now(timezone.utc) + timedelta(days=self.REFRESH_TOKEN_EXPIRE_DAYS),
             device_info=device_info
         )
@@ -216,7 +212,7 @@ class AuthService:
     
     async def refresh_access_token(self, refresh_token: str) -> str:
         """
-        Generate a new access token using a refresh token.
+        Generate a new access token using a refresh token (optimized with prefix lookup).
         
         Args:
             refresh_token: Plain text refresh token
@@ -229,19 +225,24 @@ class AuthService:
             RefreshTokenRevokedError: If refresh token has been revoked
             TokenExpiredError: If refresh token has expired
         """
-        # Find refresh token in database
-        # We need to check all refresh tokens for this user and verify the hash
+        # OPTIMIZED: Extract prefix for O(1) lookup
+        token_prefix = extract_token_prefix(refresh_token)
+        
+        # Query tokens with matching prefix (or NULL prefix for old tokens)
+        # This allows graceful migration - old tokens still work but slower
         result = await self.db.execute(
             select(RefreshToken).where(
+                (RefreshToken.token_prefix == token_prefix) | (RefreshToken.token_prefix.is_(None)),
                 RefreshToken.is_revoked == False,
                 RefreshToken.expires_at > datetime.now(timezone.utc)
             )
         )
-        all_tokens = result.scalars().all()
+        candidate_tokens = result.scalars().all()
         
+        # Verify hash on small set (usually just 1 token)
         matching_token = None
-        for token in all_tokens:
-            if verify_password(refresh_token, token.token_hash):
+        for token in candidate_tokens:
+            if verify_token_hash(refresh_token, token.token_hash):
                 matching_token = token
                 break
         
@@ -348,13 +349,14 @@ class AuthService:
             raise UserNotFoundError("If this email exists, a password reset link has been sent")
         
         # Generate reset token
-        reset_token = create_refresh_token()
-        reset_token_hash = hash_password(reset_token)
+        reset_token, token_prefix = create_token_with_prefix(32)
+        reset_token_hash = hash_token(reset_token)  # Fast SHA-256 hashing
         
         # Store reset token
         reset_token_record = PasswordResetToken(
             user_id=user.id,
             token_hash=reset_token_hash,
+            token_prefix=token_prefix,  # For O(1) lookup
             expires_at=datetime.now(timezone.utc) + timedelta(
                 hours=self.PASSWORD_RESET_EXPIRE_HOURS
             )
@@ -388,18 +390,21 @@ class AuthService:
         if not is_valid:
             raise ValueError(error_msg or "Password does not meet requirements")
         
-        # Find valid reset token
+        # OPTIMIZED: Find valid reset token using prefix lookup
+        token_prefix = extract_token_prefix(reset_token)
+        
         result = await self.db.execute(
             select(PasswordResetToken).where(
+                (PasswordResetToken.token_prefix == token_prefix) | (PasswordResetToken.token_prefix.is_(None)),
                 PasswordResetToken.used_at.is_(None),
                 PasswordResetToken.expires_at > datetime.now(timezone.utc)
             )
         )
-        all_tokens = result.scalars().all()
+        candidate_tokens = result.scalars().all()
         
         matching_token = None
-        for token in all_tokens:
-            if verify_password(reset_token, token.token_hash):
+        for token in candidate_tokens:
+            if verify_token_hash(reset_token, token.token_hash):
                 matching_token = token
                 break
         
@@ -451,13 +456,14 @@ class AuthService:
             raise ValueError("Email is already verified")
         
         # Generate verification token
-        verification_token = create_refresh_token()
-        verification_token_hash = hash_password(verification_token)
+        verification_token, token_prefix = create_token_with_prefix(32)
+        verification_token_hash = hash_token(verification_token)  # Fast SHA-256 hashing
         
         # Store verification token
         verify_token_record = EmailVerificationToken(
             user_id=user.id,
             token_hash=verification_token_hash,
+            token_prefix=token_prefix,  # For O(1) lookup
             expires_at=datetime.now(timezone.utc) + timedelta(
                 hours=self.EMAIL_VERIFICATION_EXPIRE_HOURS
             )
@@ -480,18 +486,21 @@ class AuthService:
         Raises:
             InvalidTokenError: If verification token is invalid or expired
         """
-        # Find valid verification token
+        # OPTIMIZED: Find valid verification token using prefix lookup
+        token_prefix = extract_token_prefix(verification_token)
+        
         result = await self.db.execute(
             select(EmailVerificationToken).where(
+                (EmailVerificationToken.token_prefix == token_prefix) | (EmailVerificationToken.token_prefix.is_(None)),
                 EmailVerificationToken.verified_at.is_(None),
                 EmailVerificationToken.expires_at > datetime.now(timezone.utc)
             )
         )
-        all_tokens = result.scalars().all()
+        candidate_tokens = result.scalars().all()
         
         matching_token = None
-        for token in all_tokens:
-            if verify_password(verification_token, token.token_hash):
+        for token in candidate_tokens:
+            if verify_token_hash(verification_token, token.token_hash):
                 matching_token = token
                 break
         

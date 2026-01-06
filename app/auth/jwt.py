@@ -53,16 +53,15 @@ def create_access_token(
     return token
 
 
-def create_refresh_token() -> str:
+def create_refresh_token() -> tuple[str, str]:
     """
-    Create a refresh token (random string).
+    Create a refresh token with prefix for efficient lookup.
     
     Returns:
-        Plain text refresh token (will be hashed before storage)
+        Tuple of (plain_token, prefix) where prefix is first 8 chars
     """
-    # Generate a secure random token
-    plain_token = secrets.token_urlsafe(32)
-    return plain_token
+    from app.auth.token_utils import create_token_with_prefix
+    return create_token_with_prefix(32)
 
 
 async def verify_token(token: str) -> Dict[str, Any]:

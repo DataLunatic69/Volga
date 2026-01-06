@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Column, Text, DateTime
+from sqlalchemy import Column, Text, DateTime, String, ForeignKey
 from sqlmodel import Field
 
 from .base import BaseModel
@@ -15,8 +15,14 @@ class PasswordResetToken(BaseModel, table=True):
     """Password reset token table."""
     __tablename__ = "password_reset_tokens"
     
-    user_id: UUID = Field(foreign_key="auth_users.id", index=True)
-    token_hash: str = Field(sa_column=Column(Text))
+    user_id: UUID = Field(
+        sa_column=Column(UUID, ForeignKey("auth_users.id", ondelete="CASCADE"), index=True)
+    )
+    token_hash: str = Field(sa_column=Column(Text))  # SHA-256 hashed token
+    token_prefix: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String(8), index=True, nullable=True)  # First 8 chars for O(1) lookup
+    )
     expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True)))
     used_at: Optional[datetime] = Field(
         default=None,

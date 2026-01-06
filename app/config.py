@@ -104,7 +104,16 @@ class Settings:
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-256-bit-secret-key-change-in-production")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
     ENCRYPTION_KEY: Optional[str] = os.getenv("ENCRYPTION_KEY")  # For encrypting sensitive data
+    
+    # ====================
+    # Authentication Settings
+    # ====================
+    AUTH_MAX_FAILED_ATTEMPTS: int = int(os.getenv("AUTH_MAX_FAILED_ATTEMPTS", "5"))
+    AUTH_LOCKOUT_DURATION_MINUTES: int = int(os.getenv("AUTH_LOCKOUT_DURATION_MINUTES", "30"))
+    AUTH_EMAIL_VERIFICATION_EXPIRE_HOURS: int = int(os.getenv("AUTH_EMAIL_VERIFICATION_EXPIRE_HOURS", "24"))
+    AUTH_PASSWORD_RESET_EXPIRE_HOURS: int = int(os.getenv("AUTH_PASSWORD_RESET_EXPIRE_HOURS", "1"))
     
     # ====================
     # CORS Settings
