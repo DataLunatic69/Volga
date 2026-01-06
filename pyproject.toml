@@ -31,4 +31,13 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "qdrant-client>=1.16.2",
     "sentence-transformers>=5.2.0",
+    "greenlet>=3.3.0",  # Required for SQLAlchemy async operations
+    "redis>=5.0.1",  # Redis async client
+    "bcrypt>=4.0.1",  # Password hashing
+    "PyJWT>=2.8.0",  # JWT tokens
+    "fastapi-mail>=1.4.1",  # Email service
+    "celery>=5.3.4",  # Background tasks
+    "jinja2>=3.1.2",  # Email templates
+    "asgiref>=3.7.0",  # Async sync bridge for Celery
+    "pytest>=9.0.2",
 ]

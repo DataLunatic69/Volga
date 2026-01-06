@@ -55,6 +55,9 @@ async def get_current_user(
         payload = await verify_token(token)
         user_id = UUID(payload.get("sub"))
         jti = payload.get("jti")
+        
+        # Check token blacklist (verify_token already checks this, but double-check)
+        if jti and await AuthCache.is_token_blacklisted(jti):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has been revoked",

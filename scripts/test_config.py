@@ -65,16 +65,18 @@ try:
         
         # Email
         print("\n📧 Email (FastMail):")
-        if settings.SMTP_HOST:
-            print(f"  Host: {settings.SMTP_HOST}")
-            print(f"  Port: {settings.SMTP_PORT}")
-            print(f"  User: {settings.SMTP_USER or 'Not set'}")
-            print(f"  Password: {'✓ Set' if settings.SMTP_PASSWORD else '❌ Not set'}")
-            print(f"  From: {settings.EMAIL_FROM or 'Not set'}")
-            print(f"  TLS: {settings.SMTP_USE_TLS}")
+        if settings.MAIL_SERVER:
+            print(f"  Server: {settings.MAIL_SERVER}")
+            print(f"  Port: {settings.MAIL_PORT}")
+            print(f"  Username: {settings.MAIL_USERNAME or 'Not set'}")
+            print(f"  Password: {'✓ Set' if settings.MAIL_PASSWORD else '❌ Not set'}")
+            print(f"  From: {settings.MAIL_FROM or 'Not set'}")
+            print(f"  From Name: {settings.MAIL_FROM_NAME or 'Not set'}")
+            print(f"  STARTTLS: {settings.MAIL_STARTTLS}")
+            print(f"  SSL/TLS: {settings.MAIL_SSL_TLS}")
             print(f"  Frontend URL: {settings.FRONTEND_URL}")
         else:
-            print("  ⚠️  Email not configured (SMTP settings missing)")
+            print("  ⚠️  Email not configured (MAIL_SERVER missing)")
             print("     Email functionality will not work")
         
         # Application

@@ -10,7 +10,7 @@ from .agent_performance import AgentPerformance
 from .ai_agent_session import AIAgentSession
 from .api_keys import APIKey
 from .auth_users import AuthUser
-from .base import BaseModel, TimestampMixin
+from .base import BaseModel
 from .calender_events import CalendarEvent, EventStatus, EventType
 from .consent_logs import ConsentLog, ConsentMethod, ConsentType
 from .conversation_state_snapshots import ConversationStateSnapshot, CreatedBy
@@ -48,7 +48,6 @@ from .viewings import CancelledBy, Viewing, ViewingStatus, ViewingType
 __all__ = [
     # Base
     "BaseModel",
-    "TimestampMixin",
     # Agency
     "Agency",
     "BusinessType",

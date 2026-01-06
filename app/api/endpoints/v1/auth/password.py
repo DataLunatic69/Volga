@@ -44,12 +44,20 @@ async def forgot_password(
             email=request.email
         )
         
-        # TODO: Send password reset email via background task
-        # await email_service.send_password_reset_email(
-        #     email=request.email,
-        #     reset_token=reset_token,
-        #     reset_link=f"{FRONTEND_URL}/reset-password?token={reset_token}"
-        # )
+        # Send password reset email via background task
+        from app.workers.tasks.email_tasks import send_password_reset_email_task
+        
+        try:
+            send_password_reset_email_task.delay(
+                to_email=request.email,
+                reset_token=reset_token,
+                user_name=None  # We don't have user name in forgot password request
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to queue password reset email for {request.email}: {e}", exc_info=True)
+            # Don't re-raise, allow request to complete
         
         # Always return success message (don't reveal if user exists)
         return MessageResponse(

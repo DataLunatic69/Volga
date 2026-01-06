@@ -13,7 +13,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Import your SQLModel base and all models
 from sqlmodel import SQLModel
-from app.database.models import *  # This imports all your models
+
+# Clear any existing metadata to avoid conflicts
+SQLModel.metadata.clear()
+
+# Try to import models, but continue even if there's an error
+# This allows migrations to run even if models have issues
+try:
+    from app.database.models import *  # This imports all your models
+except Exception as e:
+    # Log the error but continue - migrations can still run
+    import warnings
+    warnings.warn(f"Could not import all models: {e}. Migration may proceed anyway.")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -1,14 +1,37 @@
 """
 Celery application configuration.
 """
+import ssl
 from celery import Celery
 from app.config import settings
+
+# Get Redis URL
+redis_url = settings.redis_connection_url
+
+# Configure broker and backend with SSL parameters for rediss:// URLs
+broker_use_ssl = None
+redis_backend_use_ssl = None
+
+if redis_url.startswith("rediss://"):
+    # SSL configuration for secure Redis connections (Upstash, etc.)
+    broker_use_ssl = {
+        'ssl_cert_reqs': ssl.CERT_NONE,  # Don't verify SSL certificates
+        'ssl_ca_certs': None,
+        'ssl_certfile': None,
+        'ssl_keyfile': None,
+    }
+    redis_backend_use_ssl = {
+        'ssl_cert_reqs': ssl.CERT_NONE,
+        'ssl_ca_certs': None,
+        'ssl_certfile': None,
+        'ssl_keyfile': None,
+    }
 
 # Create Celery app
 celery_app = Celery(
     "nexcell_ai",
-    broker=settings.redis_connection_url,
-    backend=settings.redis_connection_url,
+    broker=redis_url,
+    backend=redis_url,
     include=[
         "app.workers.tasks.email_tasks",
     ]
@@ -34,6 +57,9 @@ celery_app.conf.update(
     },
     # Task result expiration
     result_expires=3600,  # 1 hour
+    # SSL configuration for broker and backend
+    broker_use_ssl=broker_use_ssl,
+    redis_backend_use_ssl=redis_backend_use_ssl,
 )
 
 # Auto-discover tasks

@@ -26,10 +26,20 @@ from .dependencies import (
     get_current_active_user,
     get_current_verified_user,
     get_current_agency,
-    require_permission,
-    require_role,
     get_optional_current_user,
 )
+from .permissions import (
+    require_permission,
+    require_role,
+    require_any_permission,
+    require_all_permissions,
+    require_ownership,
+    get_current_agency_id,
+    get_user_with_permissions,
+    check_permission_programmatic,
+    require_permission_programmatic,
+)
+from .permission_cache import PermissionCache, permission_cache
 from .exceptions import (
     AuthenticationError,
     InvalidCredentialsError,
@@ -77,9 +87,20 @@ __all__ = [
     "get_current_active_user",
     "get_current_verified_user",
     "get_current_agency",
+    "get_optional_current_user",
+    # Permission dependencies
     "require_permission",
     "require_role",
-    "get_optional_current_user",
+    "require_any_permission",
+    "require_all_permissions",
+    "require_ownership",
+    "get_current_agency_id",
+    "get_user_with_permissions",
+    "check_permission_programmatic",
+    "require_permission_programmatic",
+    # Permission cache
+    "PermissionCache",
+    "permission_cache",
     # Exceptions
     "AuthenticationError",
     "InvalidCredentialsError",

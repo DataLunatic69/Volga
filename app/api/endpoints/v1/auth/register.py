@@ -48,25 +48,39 @@ async def register(
         
         # Send verification email via background task
         verification_token = await auth_service.request_email_verification(user.id)
-        from app.workers.tasks.email_tasks import send_verification_email_task, send_welcome_email_task
         
-        send_verification_email_task.delay(
-            to_email=user.email,
-            verification_token=verification_token,
-            user_name=request.full_name
-        )
+        # Queue email tasks (non-blocking, fire-and-forget)
+        try:
+            from app.workers.tasks.email_tasks import send_verification_email_task, send_welcome_email_task
+            
+            send_verification_email_task.delay(
+                to_email=user.email,
+                verification_token=verification_token,
+                user_name=request.full_name or ""
+            )
+            
+            # Send welcome email
+            send_welcome_email_task.delay(
+                to_email=user.email,
+                user_name=request.full_name or ""
+            )
+        except Exception as email_error:
+            # Log but don't fail registration if email queueing fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to queue email tasks: {email_error}")
         
-        # Send welcome email
-        send_welcome_email_task.delay(
-            to_email=user.email,
-            user_name=request.full_name
-        )
+        # Refresh user to ensure we have latest data
+        await db.refresh(user)
         
         # Create response
         from app.auth.schemas import UserResponse, TokenResponse
         
+        # Use from_attributes mode for SQLModel compatibility
+        user_response = UserResponse.model_validate(user, from_attributes=True)
+        
         return AuthResponse(
-            user=UserResponse.model_validate(user),
+            user=user_response,
             tokens=TokenResponse(
                 access_token=access_token,
                 refresh_token=refresh_token,
@@ -81,8 +95,17 @@ async def register(
             detail="User with this email already exists"
         )
     except ValueError as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
         )
 

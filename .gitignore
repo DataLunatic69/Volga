@@ -13,3 +13,6 @@ __pycache__
 !README.md
 *.txt
 uv.lock
+*.json
+uv.lock
+scripts/

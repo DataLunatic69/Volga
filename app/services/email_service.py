@@ -27,25 +27,54 @@ def get_mail_config() -> ConnectionConfig:
     
     Returns:
         ConnectionConfig for FastMail
+        
+    Raises:
+        ValueError: If required email settings are missing
     """
+    if not settings.MAIL_SERVER:
+        raise ValueError("MAIL_SERVER is required for email functionality")
+    if not settings.MAIL_USERNAME:
+        raise ValueError("MAIL_USERNAME is required for email functionality")
+    if not settings.MAIL_PASSWORD:
+        raise ValueError("MAIL_PASSWORD is required for email functionality")
+    if not settings.MAIL_FROM:
+        raise ValueError("MAIL_FROM is required for email functionality")
+    
     return ConnectionConfig(
-        MAIL_USERNAME=settings.SMTP_USER,
-        MAIL_PASSWORD=settings.SMTP_PASSWORD,
-        MAIL_FROM=settings.EMAIL_FROM or settings.SMTP_USER,
-        MAIL_FROM_NAME=settings.APP_NAME,
-        MAIL_PORT=settings.SMTP_PORT,
-        MAIL_SERVER=settings.SMTP_HOST,
-        MAIL_STARTTLS=settings.SMTP_USE_TLS,
-        MAIL_SSL_TLS=not settings.SMTP_USE_TLS,
+        MAIL_USERNAME=settings.MAIL_USERNAME,
+        MAIL_PASSWORD=settings.MAIL_PASSWORD,
+        MAIL_FROM=settings.MAIL_FROM,
+        MAIL_FROM_NAME=settings.MAIL_FROM_NAME or settings.APP_NAME,
+        MAIL_PORT=settings.MAIL_PORT,
+        MAIL_SERVER=settings.MAIL_SERVER,
+        MAIL_STARTTLS=settings.MAIL_STARTTLS,
+        MAIL_SSL_TLS=settings.MAIL_SSL_TLS,
         USE_CREDENTIALS=True,
         VALIDATE_CERTS=True,
         TEMPLATE_FOLDER=str(TEMPLATE_DIR),
     )
 
 
-# Initialize FastMail instance
-mail_config = get_mail_config()
-mail = FastMail(mail_config)
+# Initialize FastMail instance (lazy initialization)
+mail: Optional[FastMail] = None
+
+
+def get_mail() -> Optional[FastMail]:
+    """
+    Get FastMail instance, initializing if needed.
+    
+    Returns:
+        FastMail instance or None if not configured
+    """
+    global mail
+    if mail is None:
+        try:
+            mail_config = get_mail_config()
+            mail = FastMail(mail_config)
+        except ValueError:
+            # Email not configured, return None
+            return None
+    return mail
 
 
 def render_template(template_name: str, context: Dict[str, Any]) -> str:
@@ -103,9 +132,16 @@ async def send_email_async(
         subject: Email subject
         body: Email body
         subtype: Message type
+        
+    Raises:
+        ValueError: If email is not configured
     """
+    mail_instance = get_mail()
+    if not mail_instance:
+        raise ValueError("Email service is not configured. Set MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, and MAIL_FROM")
+    
     message = create_message(recipients, subject, body, subtype)
-    await mail.send_message(message)
+    await mail_instance.send_message(message)
 
 
 def send_email_sync(
@@ -122,16 +158,23 @@ def send_email_sync(
         subject: Email subject
         body: Email body
         subtype: Message type
+        
+    Raises:
+        ValueError: If email is not configured
     """
+    mail_instance = get_mail()
+    if not mail_instance:
+        raise ValueError("Email service is not configured. Set MAIL_SERVER, MAIL_USERNAME, MAIL_PASSWORD, and MAIL_FROM")
+    
     message = create_message(recipients, subject, body, subtype)
-    async_to_sync(mail.send_message)(message)
+    async_to_sync(mail_instance.send_message)(message)
 
 
 class EmailService:
     """Email service for sending various types of emails."""
     
-    # Frontend URL for email links (from config)
-    FRONTEND_URL: str = settings.FRONTEND_URL
+    # Note: Frontend URL removed - backend only for now
+    # When frontend is configured, add FRONTEND_URL back to settings
     
     @staticmethod
     async def send_verification_email(
@@ -147,7 +190,8 @@ class EmailService:
             verification_token: Email verification token
             user_name: User's name (optional)
         """
-        verification_link = f"{EmailService.FRONTEND_URL}/verify-email?token={verification_token}"
+        # Create full URL with backend domain for clickable email link
+        verification_link = f"{settings.BACKEND_DOMAIN}/api/v1/verify-email/{verification_token}"
         
         context = {
             "user_name": user_name or "User",
@@ -174,7 +218,8 @@ class EmailService:
             reset_token: Password reset token
             user_name: User's name (optional)
         """
-        reset_link = f"{EmailService.FRONTEND_URL}/reset-password?token={reset_token}"
+        # Create full URL with backend domain for clickable email link
+        reset_link = f"{settings.BACKEND_DOMAIN}/api/v1/reset-password/{reset_token}"
         
         context = {
             "user_name": user_name or "User",
@@ -203,7 +248,7 @@ class EmailService:
         context = {
             "user_name": user_name or "User",
             "app_name": settings.APP_NAME,
-            "login_link": f"{EmailService.FRONTEND_URL}/login",
+            "login_link": "login",  # Backend only - frontend will handle routing
         }
         
         body = render_template("welcome.html", context)
@@ -219,7 +264,8 @@ class EmailService:
         user_name: Optional[str] = None
     ) -> None:
         """Synchronous version for Celery tasks."""
-        verification_link = f"{EmailService.FRONTEND_URL}/verify-email?token={verification_token}"
+        # Create full URL with backend domain for clickable email link
+        verification_link = f"{settings.BACKEND_DOMAIN}/api/v1/verify-email/{verification_token}"
         
         context = {
             "user_name": user_name or "User",
@@ -239,7 +285,8 @@ class EmailService:
         user_name: Optional[str] = None
     ) -> None:
         """Synchronous version for Celery tasks."""
-        reset_link = f"{EmailService.FRONTEND_URL}/reset-password?token={reset_token}"
+        # Create full URL with backend domain for clickable email link
+        reset_link = f"{settings.BACKEND_DOMAIN}/api/v1/reset-password/{reset_token}"
         
         context = {
             "user_name": user_name or "User",
@@ -262,7 +309,7 @@ class EmailService:
         context = {
             "user_name": user_name or "User",
             "app_name": settings.APP_NAME,
-            "login_link": f"{EmailService.FRONTEND_URL}/login",
+            "login_link": "login",  # Backend only - frontend will handle routing
         }
         
         body = render_template("welcome.html", context)

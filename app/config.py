@@ -28,6 +28,12 @@ class Settings:
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     
+    # Backend Domain (for email links)
+    BACKEND_DOMAIN: str = os.getenv(
+        "BACKEND_DOMAIN",
+        f"http://localhost:{os.getenv('API_PORT', '8000')}"
+    )
+    
     # ====================
     # Database Settings (Supabase)
     # ====================
@@ -120,11 +126,21 @@ class Settings:
     # ====================
     # Email Settings (SMTP)
     # ====================
-    SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-    SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
-    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
-    EMAIL_FROM: Optional[str] = os.getenv("EMAIL_FROM")
+    MAIL_SERVER: Optional[str] = os.getenv("MAIL_SERVER")
+    MAIL_PORT: int = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USERNAME: Optional[str] = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD: Optional[str] = os.getenv("MAIL_PASSWORD")
+    MAIL_FROM: Optional[str] = os.getenv("MAIL_FROM")
+    MAIL_FROM_NAME: Optional[str] = os.getenv("MAIL_FROM_NAME", "NexCell AI Receptionist")
+    MAIL_STARTTLS: bool = os.getenv("MAIL_STARTTLS", "True").lower() == "true"
+    MAIL_SSL_TLS: bool = os.getenv("MAIL_SSL_TLS", "False").lower() == "true"
+    
+    # Legacy support (deprecated - use MAIL_* variables instead)
+    SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST") or os.getenv("MAIL_SERVER")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT") or os.getenv("MAIL_PORT", "587"))
+    SMTP_USER: Optional[str] = os.getenv("SMTP_USER") or os.getenv("MAIL_USERNAME")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD") or os.getenv("MAIL_PASSWORD")
+    EMAIL_FROM: Optional[str] = os.getenv("EMAIL_FROM") or os.getenv("MAIL_FROM")
     SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "True").lower() == "true"
     
     # ====================
@@ -206,6 +222,16 @@ class Settings:
     def redis_connection_url(self) -> Optional[str]:
         """Get the Redis URL, constructing it if not provided directly."""
         if self.REDIS_URL:
+            # If REDIS_URL is provided, ensure it has protocol
+            if not self.REDIS_URL.startswith(("redis://", "rediss://")):
+                # If it's just host:port, add protocol
+                if "://" not in self.REDIS_URL:
+                    protocol = "rediss://" if self.REDIS_SSL else "redis://"
+                    # Handle format: host:port or host:port/db
+                    if "/" in self.REDIS_URL:
+                        return f"{protocol}{self.REDIS_URL}"
+                    else:
+                        return f"{protocol}{self.REDIS_URL}/{self.REDIS_DB}"
             return self.REDIS_URL
         
         auth_part = ""
@@ -220,12 +246,13 @@ class Settings:
     def smtp_connection(self) -> dict:
         """Get SMTP connection configuration."""
         return {
-            "host": self.SMTP_HOST,
-            "port": self.SMTP_PORT,
-            "username": self.SMTP_USER,
-            "password": self.SMTP_PASSWORD,
-            "use_tls": self.SMTP_USE_TLS,
-            "from_email": self.EMAIL_FROM
+            "host": self.MAIL_SERVER or self.SMTP_HOST,
+            "port": self.MAIL_PORT,
+            "username": self.MAIL_USERNAME or self.SMTP_USER,
+            "password": self.MAIL_PASSWORD or self.SMTP_PASSWORD,
+            "use_tls": self.MAIL_STARTTLS or self.SMTP_USE_TLS,
+            "from_email": self.MAIL_FROM or self.EMAIL_FROM,
+            "from_name": self.MAIL_FROM_NAME
         }
     
     @property
