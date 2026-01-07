@@ -217,22 +217,3 @@ def get_contextual_logger(
 setup_logging()
 
 
-# Example usage:
-"""
-from app.core.logger import get_logger, get_contextual_logger
-
-# Basic logger
-logger = get_logger(__name__)
-logger.info("Application started")
-logger.error("An error occurred", exc_info=True)
-
-# Contextual logger (for request handling)
-logger = get_contextual_logger(
-    __name__,
-    user_id=str(user.id),
-    agency_id=str(agency.id),
-    request_id=request.headers.get("X-Request-ID")
-)
-logger.info("Processing user request")
-logger.warning("Rate limit approaching", extra={"remaining": 10})
-"""

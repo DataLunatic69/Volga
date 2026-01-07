@@ -15,4 +15,4 @@ __pycache__
 uv.lock
 *.json
 uv.lock
-scripts/
+

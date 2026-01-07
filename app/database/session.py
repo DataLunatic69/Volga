@@ -1,6 +1,7 @@
 """Database session factory."""
 from sqlmodel import SQLModel
 from typing import AsyncGenerator
+from contextlib import asynccontextmanager
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
@@ -50,6 +51,36 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async_session = async_sessionmaker(
         autocommit=False, 
         autoflush=False, 
+        bind=async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    async with async_session() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+@asynccontextmanager
+async def get_async_session_context() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Context manager for database sessions (for use outside FastAPI dependencies).
+    
+    Usage:
+        async with get_async_session_context() as db:
+            result = await db.execute(select(...))
+    
+    Yields:
+        Database session.
+    """
+    async_session = async_sessionmaker(
+        autocommit=False,
+        autoflush=False,
         bind=async_engine,
         class_=AsyncSession,
         expire_on_commit=False

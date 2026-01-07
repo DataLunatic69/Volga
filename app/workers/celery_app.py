@@ -51,10 +51,17 @@ celery_app.conf.update(
     worker_max_tasks_per_child=1000,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
-    # Task routing
+    # Task routing - route email tasks to email_queue
     task_routes={
-        "app.workers.tasks.email_tasks.*": {"queue": "email_queue"},
+        "send_verification_email_task": {"queue": "email_queue"},
+        "send_welcome_email_task": {"queue": "email_queue"},
+        "send_password_reset_email_task": {"queue": "email_queue"},
     },
+    # Default queue for tasks without explicit routing
+    task_default_queue="default",
+    task_default_exchange="default",
+    task_default_exchange_type="direct",
+    task_default_routing_key="default",
     # Task result expiration
     result_expires=3600,  # 1 hour
     # SSL configuration for broker and backend

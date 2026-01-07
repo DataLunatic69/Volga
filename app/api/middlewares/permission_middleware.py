@@ -1,18 +1,21 @@
 """
 Permission Middleware - Validates user permissions for routes.
 
-This middleware works in conjunction with FastAPI dependencies.
-It provides a centralized way to check permissions before routes execute.
+NOTE: Most permission checks are done via FastAPI dependencies (require_permission).
+This middleware provides an additional layer for route-level enforcement.
 
-Note: Most permission checks are done via dependencies (require_permission),
-but this middleware can be used for route-level permission enforcement.
+It checks:
+1. Route metadata for required permissions/roles
+2. User has required access in agency context
 """
-from typing import Callable, Optional
 import logging
+from typing import Optional
+from uuid import UUID
 
-from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
+from starlette.requests import Request
+from starlette.responses import Response, JSONResponse
+from starlette.types import ASGIApp
 
 from app.auth.rbac import PermissionService
 from app.auth.cache import permission_cache
@@ -25,90 +28,148 @@ class PermissionMiddleware(BaseHTTPMiddleware):
     """
     Middleware to check permissions for routes.
     
-    This is optional - most permission checks are done via dependencies.
-    Use this middleware if you want route-level permission enforcement
-    based on route metadata.
+    This is OPTIONAL - most permission checks are done via dependencies.
+    Use this for additional route-level enforcement.
     """
     
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    def __init__(self, app: ASGIApp, enabled: bool = True):
+        """
+        Initialize middleware.
+        
+        Args:
+            app: ASGI application
+            enabled: If False, skip permission checks entirely
+        """
+        super().__init__(app)
+        self.enabled = enabled
+    
+    async def dispatch(self, request: Request, call_next) -> Response:
         """Check permissions if route requires them."""
         
-        # Skip if no user authenticated (handled by AuthMiddleware)
-        if not hasattr(request.state, "user") or not request.state.user:
+        if not self.enabled:
             return await call_next(request)
         
-        # Check if route has permission requirements in metadata
+        # Skip if no user authenticated
+        if not getattr(request.state, "authenticated", False):
+            return await call_next(request)
+        
+        # Get route from scope
         route = request.scope.get("route")
-        if route:
-            required_permission = route.extra.get("required_permission")
-            required_role = route.extra.get("required_role")
+        if not route:
+            return await call_next(request)
+        
+        # Check for permission requirements in endpoint
+        endpoint = request.scope.get("endpoint")
+        if not endpoint:
+            return await call_next(request)
+        
+        # Check for permission attributes on endpoint function
+        required_permissions = getattr(endpoint, "required_permissions", None)
+        required_roles = getattr(endpoint, "required_roles", None)
+        
+        if not required_permissions and not required_roles:
+            return await call_next(request)
+        
+        # Get user and agency context
+        user_id = getattr(request.state, "user_id", None)
+        if not user_id:
+            return await call_next(request)
+        
+        agency_id = self._extract_agency_id(request)
+        if not agency_id:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Agency ID is required for this operation"}
+            )
+        
+        # Check permissions
+        try:
+            # Try cache first for permissions
+            if required_permissions:
+                cached_perms = await permission_cache.get_user_permissions(user_id, agency_id)
+                
+                if cached_perms is not None:
+                    # Check from cache
+                    missing = [p for p in required_permissions if p not in cached_perms]
+                    if missing:
+                        logger.warning(
+                            f"Permission denied: user {user_id} lacks {missing} "
+                            f"for {request.url.path}"
+                        )
+                        return JSONResponse(
+                            status_code=403,
+                            content={"detail": f"Missing permissions: {', '.join(missing)}"}
+                        )
+                else:
+                    # Cache miss - check via database
+                    async with get_async_session_context() as db:
+                        permission_service = PermissionService(db)
+                        
+                        for perm in required_permissions:
+                            has_perm = await permission_service.check_permission(
+                                user_id, agency_id, perm
+                            )
+                            if not has_perm:
+                                logger.warning(
+                                    f"Permission denied: user {user_id} lacks '{perm}' "
+                                    f"for {request.url.path}"
+                                )
+                                return JSONResponse(
+                                    status_code=403,
+                                    content={"detail": f"Permission denied: {perm}"}
+                                )
             
-            if required_permission or required_role:
-                user = request.state.user
-                agency_id = self._extract_agency_id(request)
-                
-                if not agency_id:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Agency ID is required for permission checks"
-                    )
-                
-                # Check permission or role
+            # Check roles
+            if required_roles:
                 async with get_async_session_context() as db:
                     permission_service = PermissionService(db)
                     
-                    if required_permission:
-                        has_permission = await permission_service.check_permission(
-                            user.id,
-                            agency_id,
-                            required_permission
-                        )
-                        
-                        if not has_permission:
-                            logger.warning(
-                                f"Permission denied: user {user.id} lacks '{required_permission}' "
-                                f"for {request.url.path}"
-                            )
-                            raise HTTPException(
-                                status_code=status.HTTP_403_FORBIDDEN,
-                                detail=f"Permission denied: {required_permission}"
-                            )
+                    has_any_role = False
+                    for role in required_roles:
+                        if await permission_service.has_role(user_id, agency_id, role):
+                            has_any_role = True
+                            break
                     
-                    if required_role:
-                        has_role = await permission_service.has_role(
-                            user.id,
-                            agency_id,
-                            required_role
+                    if not has_any_role:
+                        logger.warning(
+                            f"Role check failed: user {user_id} lacks any of {required_roles} "
+                            f"for {request.url.path}"
+                        )
+                        return JSONResponse(
+                            status_code=403,
+                            content={"detail": f"Required role: {' or '.join(required_roles)}"}
                         )
                         
-                        if not has_role:
-                            logger.warning(
-                                f"Role check failed: user {user.id} lacks role '{required_role}' "
-                                f"for {request.url.path}"
-                            )
-                            raise HTTPException(
-                                status_code=status.HTTP_403_FORBIDDEN,
-                                detail=f"Role required: {required_role}"
-                            )
+        except Exception as e:
+            logger.error(f"Permission middleware error: {e}", exc_info=True)
+            return JSONResponse(
+                status_code=500,
+                content={"detail": "Permission check failed"}
+            )
         
-        # Continue to route handler
+        # All checks passed
         return await call_next(request)
     
-    def _extract_agency_id(self, request: Request) -> Optional[str]:
+    def _extract_agency_id(self, request: Request) -> Optional[UUID]:
         """Extract agency_id from request."""
         # Check path parameters
-        agency_id = request.path_params.get("agency_id")
-        if agency_id:
-            return agency_id
+        agency_id_str = request.path_params.get("agency_id")
+        if agency_id_str:
+            try:
+                return UUID(agency_id_str)
+            except ValueError:
+                pass
         
         # Check query parameters
-        agency_id = request.query_params.get("agency_id")
-        if agency_id:
-            return agency_id
+        agency_id_str = request.query_params.get("agency_id")
+        if agency_id_str:
+            try:
+                return UUID(agency_id_str)
+            except ValueError:
+                pass
         
-        # Check request state (set by previous middleware/dependency)
+        # Check request state
         if hasattr(request.state, "agency_id"):
             return request.state.agency_id
         
         return None
-

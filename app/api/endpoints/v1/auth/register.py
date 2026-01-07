@@ -52,23 +52,29 @@ async def register(
         # Queue email tasks (non-blocking, fire-and-forget)
         try:
             from app.workers.tasks.email_tasks import send_verification_email_task, send_welcome_email_task
+            import logging
+            logger = logging.getLogger(__name__)
             
-            send_verification_email_task.delay(
+            # Queue verification email
+            task_result = send_verification_email_task.delay(
                 to_email=user.email,
                 verification_token=verification_token,
                 user_name=request.full_name or ""
             )
+            logger.info(f"Queued verification email task: {task_result.id} for {user.email}")
             
             # Send welcome email
-            send_welcome_email_task.delay(
+            welcome_task_result = send_welcome_email_task.delay(
                 to_email=user.email,
                 user_name=request.full_name or ""
             )
+            logger.info(f"Queued welcome email task: {welcome_task_result.id} for {user.email}")
+            
         except Exception as email_error:
             # Log but don't fail registration if email queueing fails
             import logging
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to queue email tasks: {email_error}")
+            logger.error(f"Failed to queue email tasks: {email_error}", exc_info=True)
         
         # Refresh user to ensure we have latest data
         await db.refresh(user)

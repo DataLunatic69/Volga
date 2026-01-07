@@ -8,14 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.api.endpoints.v1.auth import router as auth_router
-from app.api.middlewares.auth_middleware import AuthMiddleware
+from app.api.middlewares import (
+    AuthMiddleware,
+    RateLimitingMiddleware,
+    LoggingMiddleware,
+    SecurityLoggingMiddleware,
+)
 from app.database.redis import init_redis_cache, close_redis_cache
+from app.core.logger import setup_logging
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown events."""
     # Startup
+    setup_logging()
     await init_redis_cache()
     yield
     # Shutdown
@@ -32,7 +39,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add CORS middleware
+# ============================================================
+# Middleware Stack (order matters - last added = first executed)
+# 
+# Request flow:  Client -> CORS -> Logging -> RateLimit -> Auth -> Route
+# Response flow: Route -> Auth -> RateLimit -> Logging -> CORS -> Client
+# ============================================================
+
+# 1. CORS (outermost - must handle preflight first)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -41,8 +55,17 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
-# Add authentication middleware
-app.add_middleware(AuthMiddleware, auto_error=False)
+# 2. Request Logging (logs all requests with timing)
+app.add_middleware(LoggingMiddleware)
+
+# 3. Security Event Logging (logs auth failures, rate limits)
+app.add_middleware(SecurityLoggingMiddleware)
+
+# 4. Rate Limiting (protects against DoS/brute force)
+app.add_middleware(RateLimitingMiddleware, enabled=True)
+
+# 5. Authentication (validates JWT, attaches user)
+app.add_middleware(AuthMiddleware, auto_error=True)
 
 # Include routers
 app.include_router(auth_router, prefix="/api/v1")
